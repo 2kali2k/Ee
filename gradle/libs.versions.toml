@@ -14,6 +14,11 @@ commonsCompress = "1.27.1"
 media3 = "1.4.1"
 okhttp = "4.12.0"
 coil = "2.7.0"
+smbj = "0.13.0"
+sshd = "2.14.0"
+commonsNet = "3.11.1"
+work = "2.9.1"
+slf4j = "2.0.13"
 
 [libraries]
 # AndroidX
@@ -48,6 +53,11 @@ media3-exoplayer = { group = "androidx.media3", name = "media3-exoplayer", versi
 media3-ui = { group = "androidx.media3", name = "media3-ui", version.ref = "media3" }
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
 coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
+smbj = { group = "com.hierynomus", name = "smbj", version.ref = "smbj" }
+sshd-core = { group = "org.apache.sshd", name = "sshd-core", version.ref = "sshd" }
+commons-net = { group = "commons-net", name = "commons-net", version.ref = "commonsNet" }
+work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
+slf4j-android = { group = "org.slf4j", name = "slf4j-android", version.ref = "slf4j" }
 
 # Testing
 junit = { group = "junit", name = "junit", version.ref = "junit" }

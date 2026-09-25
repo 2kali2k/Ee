@@ -13,11 +13,11 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -54,6 +54,7 @@ enum class RootTarget {
     BROWSER,
     MEDIA,
     TRANSFERS,
+    NETWORK,
 }
 
 data class HomeRoot(
@@ -209,7 +210,23 @@ fun HomeScreen(
                     )
                 }
                 item {
-                    RootTile("Network", "M3", Icons.Outlined.Folder, enabled = false, onClick = {})
+                    RootTile(
+                        title = "Network",
+                        subtitle = "SMB · SFTP · FTP · WebDAV",
+                        icon = Icons.Outlined.Dns,
+                        enabled = true,
+                        onClick = {
+                            onRootClick(
+                                HomeRoot(
+                                    "Network",
+                                    "SMB · SFTP · FTP · WebDAV",
+                                    Icons.Outlined.Dns,
+                                    RootTarget.NETWORK,
+                                    null,
+                                ),
+                            )
+                        },
+                    )
                 }
             }
 

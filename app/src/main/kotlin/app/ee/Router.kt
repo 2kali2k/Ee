@@ -9,6 +9,7 @@ sealed interface Screen {
     data class Browser(val startUri: String) : Screen
     data object Media : Screen
     data object Transfers : Screen
+    data object Network : Screen
     data class Image(val uri: String, val title: String) : Screen
     data class Video(val uri: String, val title: String) : Screen
     data class Audio(val uri: String, val title: String) : Screen

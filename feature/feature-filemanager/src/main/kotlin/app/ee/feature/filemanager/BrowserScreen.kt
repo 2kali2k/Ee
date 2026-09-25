@@ -22,6 +22,9 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Archive
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.ContentPaste
+import androidx.compose.material.icons.outlined.FileCopy
+import androidx.compose.material.icons.outlined.DriveFileMove
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Delete
@@ -67,7 +70,9 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import app.ee.core.db.RecentFileDao
 import app.ee.core.fs.FsRegistry
+import app.ee.core.model.ClipboardEntry
 import app.ee.core.model.FsNode
+import kotlinx.coroutines.flow.StateFlow
 
 /**
  * The file browser (M1 core screen — P0-3/4/5).
@@ -85,6 +90,8 @@ fun BrowserScreen(
     startUri: String,
     vfs: FsRegistry,
     recentsDao: RecentFileDao? = null,
+    clipboard: StateFlow<List<ClipboardEntry>>,
+    setClipboard: (List<ClipboardEntry>) -> Unit,
     onBack: () -> Unit,
     onOpenFile: (FsNode) -> Unit,
     onOpenArchive: (FsNode) -> Unit,
@@ -93,10 +100,11 @@ fun BrowserScreen(
 ) {
     val vm: BrowserViewModel = viewModel(
         factory = viewModelFactory {
-            initializer { BrowserViewModel(vfs, startUri, recentsDao) }
+            initializer { BrowserViewModel(vfs, startUri, recentsDao, clipboard, setClipboard) }
         },
     )
     val state by vm.state.collectAsStateWithLifecycle()
+    val clipboardCount by vm.clipboardCount.collectAsStateWithLifecycle()
     var menuOpen by remember { mutableStateOf(false) }
     var newFolderDialog by remember { mutableStateOf(false) }
     var renameTarget by remember { mutableStateOf<FsNode?>(null) }
@@ -125,6 +133,14 @@ fun BrowserScreen(
                     },
                     actions = {
                         if (state.search == null) {
+                            if (clipboardCount > 0) {
+                                IconButton(onClick = { vm.paste() }) {
+                                    Icon(
+                                        Icons.Outlined.ContentPaste,
+                                        contentDescription = "Paste ($clipboardCount)",
+                                    )
+                                }
+                            }
                             IconButton(onClick = { vm.openSearch() }) {
                                 Icon(Icons.Outlined.Search, contentDescription = "Search")
                             }
@@ -241,6 +257,18 @@ fun BrowserScreen(
                             },
                         ) {
                             Icon(Icons.Outlined.InsertDriveFile, contentDescription = "Share")
+                        }
+                        IconButton(
+                            enabled = visible.any { it.id in state.selection },
+                            onClick = { vm.copySelected() },
+                        ) {
+                            Icon(Icons.Outlined.FileCopy, contentDescription = "Copy")
+                        }
+                        IconButton(
+                            enabled = visible.any { it.id in state.selection },
+                            onClick = { vm.moveSelected() },
+                        ) {
+                            Icon(Icons.Outlined.DriveFileMove, contentDescription = "Move")
                         }
                         IconButton(onClick = { vm.deleteSelected() }) {
                             Icon(Icons.Outlined.Delete, contentDescription = "Delete")

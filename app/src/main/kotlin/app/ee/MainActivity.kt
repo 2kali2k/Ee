@@ -94,6 +94,7 @@ private fun MainContent(app: EeApp, router: Router) {
                         root.uri?.let { router.push(Screen.Browser(it)) }
                     RootTarget.MEDIA -> router.push(Screen.Media)
                     RootTarget.TRANSFERS -> router.push(Screen.Transfers)
+                    RootTarget.NETWORK -> router.push(Screen.Network)
                 }
             },
             onSettingsClick = { router.push(Screen.Settings) },
@@ -104,6 +105,8 @@ private fun MainContent(app: EeApp, router: Router) {
             startUri = screen.startUri,
             vfs = app.vfs,
             recentsDao = app.database.recentFiles(),
+            clipboard = app.clipboard,
+            setClipboard = app::setClipboard,
             onBack = popOrFinish,
             onOpenFile = { node -> FileActions.openFile(context, node) },
             onOpenArchive = { node ->
@@ -126,6 +129,16 @@ private fun MainContent(app: EeApp, router: Router) {
         Screen.Transfers -> TransfersScreen(
             onBack = popOrFinish,
             database = app.database,
+        )
+
+        Screen.Network -> app.ee.feature.network.ConnectionsScreen(
+            onBack = popOrFinish,
+            onOpen = { type, id ->
+                router.push(Screen.Browser("ee://${type.name.lowercase()}/$id"))
+            },
+            dao = app.database.connections(),
+            onSave = { form -> app.saveProfile(form) },
+            onDelete = { id -> app.deleteProfile(id) },
         )
 
         is Screen.Image -> ImageViewerScreen(

@@ -4,7 +4,9 @@ import app.ee.core.db.RecentFileDao
 import app.ee.core.fs.FsException
 import app.ee.core.fs.FsRegistry
 import app.ee.core.fs.FsUri
+import app.ee.core.model.ClipboardEntry
 import app.ee.core.model.FsKind
+import app.ee.core.model.FsMetadata
 import app.ee.core.model.FsNode
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -14,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import okio.Buffer
 
 /**
  * Browser ViewModel: one instance per opened browser (the `app` Router gives
@@ -23,17 +26,106 @@ class BrowserViewModel(
     private val vfs: FsRegistry,
     startUri: String,
     private val recentDao: RecentFileDao? = null,
+    private val appClipboard: StateFlow<List<ClipboardEntry>>,
+    private val setClipboard: (List<ClipboardEntry>) -> Unit,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(BrowserState())
     val state: StateFlow<BrowserState> = _state
+
+    /** Clipboard shared across browser instances (app-scoped). */
+    private val _clipboardCount = MutableStateFlow(0)
+    val clipboardCount: StateFlow<Int> = _clipboardCount
+    private val pendingMove = MutableStateFlow(false)
 
     private var listJob: Job? = null
     private var current: FsNode? = null
 
     init {
         openUri(startUri)
+        viewModelScope.launch {
+            appClipboard.collect { _clipboardCount.value = it.size }
+        }
     }
+
+    // ── copy / move (M3 — P0-5 ops) ────────────────────────────────────────
+
+    fun copySelected() {
+        val nodes = selectedNodes()
+        if (nodes.isEmpty()) return
+        pendingMove.value = false
+        setClipboard(nodes.map { it.toClipboardEntry() })
+        clearSelection()
+    }
+
+    fun moveSelected() {
+        val nodes = selectedNodes()
+        if (nodes.isEmpty()) return
+        pendingMove.value = true
+        setClipboard(nodes.map { it.toClipboardEntry() })
+        clearSelection()
+    }
+
+    fun clearClipboard() {
+        setClipboard(emptyList())
+    }
+
+    /**
+     * Paste the clipboard into the current directory. M3: files only —
+     * directory trees ride the transfer station (M3b). Whole-file copy
+     * (source buffered in memory; chunked streaming lands with transfers).
+     */
+    fun paste() {
+        val entries = _clipboardCount.value
+        if (entries <= 0) return
+        val target = current ?: return
+        if (!target.isDirectory) return
+        val items = clipboardSnapshot()
+        if (items.isEmpty()) return
+        operate(
+            if (pendingMove.value) "Moving ${items.size} item(s)…"
+            else "Copying ${items.size} item(s)…",
+        ) {
+            items.forEach { item ->
+                val srcProvider = vfs.provider(item.type)
+                val srcNode = FsNode(
+                    id = item.uri,
+                    uri = item.uri,
+                    name = item.name,
+                    providerType = item.type,
+                    metadata = FsMetadata(sizeBytes = item.sizeBytes, isDirectory = false, extra = item.extra),
+                )
+                val buffer = Buffer()
+                srcProvider.open(srcNode).use { buffer.readFrom(it) }
+                val childUri = target.uri + "/" + item.name
+                val child = FsNode(
+                    id = childUri,
+                    uri = childUri,
+                    name = item.name,
+                    providerType = target.providerType,
+                )
+                vfs.provider(target.providerType).write(child, buffer).collect {}
+                if (pendingMove.value) {
+                    srcProvider.delete(srcNode, force = false)
+                }
+            }
+            setClipboard(emptyList())
+            list()
+        }
+    }
+
+    private fun clipboardSnapshot(): List<ClipboardEntry> =
+        appClipboard.value
+
+    private fun FsNode.toClipboardEntry(): ClipboardEntry =
+        ClipboardEntry(
+            uri = uri,
+            name = name,
+            type = providerType,
+            isDirectory = isDirectory,
+            sizeBytes = metadata?.sizeBytes,
+            extra = metadata?.extra ?: emptyMap(),
+        )
 
     /** Open a fresh root/uri (used at start and when navigating from home). */
     fun openUri(uri: String) {

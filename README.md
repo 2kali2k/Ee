@@ -18,7 +18,7 @@ Explorer 4.4.2.2.1) is used **only as a functional reference** — see the analy
 | 3. M0 — project scaffold (33 modules, VFS core + tests, design system, CI) | ✅ done |
 | 4. M1 — local file manager MVP (browser, local provider, trash, Room, settings) | ✅ done |
 | 5. M2 — archives + media (players, downloads, media library) | ✅ done |
-| 6. M3 — network drives (SMB/SFTP/FTP/WebDAV/HTTP) + background transfers | ⏳ next |
+| 6. M3 — network drives (SMB/SFTP/FTP/WebDAV/HTTP) + background transfers | 🚧 in progress |
 
 ### M2 highlights (v0.3.0-m2)
 
@@ -33,6 +33,16 @@ Explorer 4.4.2.2.1) is used **only as a functional reference** — see the analy
   resume (206 → append, 200 → restart), queue persisted in Room (v2, real
   1→2 migration). WorkManager background execution lands in M3.
 - **Recent files** on home, recorded as files are opened.
+
+### M3 progress (in progress)
+
+- **Network providers** — SMB (SMBJ), SFTP (MINA SSHD), FTP (Commons Net),
+  WebDAV (PROPFIND over OkHttp), HTTP (stream + autoindex listing).
+- **Connection manager** — saved profiles (Room) + add/delete UI; passwords
+  encrypted with an Android-Keystore-wrapped AES-256-GCM box
+  (`core-security`, unit-tested primitives); never stored in plaintext.
+- **Copy/move** (P0-5) — app-wide clipboard, copy/move in the selection bar,
+  paste into any directory (local↔network).
 
 ## Building
 

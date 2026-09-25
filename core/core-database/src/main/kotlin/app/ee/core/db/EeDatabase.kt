@@ -104,11 +104,20 @@ interface ConnectionDao {
     @Query("SELECT * FROM connections ORDER BY name COLLATE NOCASE ASC")
     fun observeAll(): Flow<List<ConnectionEntity>>
 
+    @Query("SELECT * FROM connections WHERE id = :id")
+    fun observeById(id: Long): Flow<ConnectionEntity?>
+
+    @Query("SELECT * FROM connections WHERE id = :id")
+    suspend fun byId(id: Long): ConnectionEntity?
+
     @Query("INSERT INTO connections (name, fsType, host, port, path, username, authRef, createdAt) VALUES (:name, :fsType, :host, :port, :path, :username, :authRef, :createdAt)")
     suspend fun add(connection: ConnectionEntity): Long
 
+    @Query("UPDATE connections SET authRef = :authRef WHERE id = :id")
+    suspend fun updateAuthRef(id: Long, authRef: String)
+
     @Query("DELETE FROM connections WHERE id = :id")
-    suspend fun remove(id: Long)
+    fun remove(id: Long)
 }
 
 @Dao
