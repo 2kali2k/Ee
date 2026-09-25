@@ -5,8 +5,10 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -47,6 +49,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import app.ee.core.db.ConnectionDao
 import app.ee.core.db.ConnectionEntity
 import app.ee.core.model.FsType
+import java.io.File
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -128,14 +131,19 @@ fun ConnectionsScreen(
     dao: ConnectionDao,
     onSave: suspend (ProfileForm) -> Unit,
     onDelete: (Long) -> Unit,
+    shareRoot: File,
 ) {
     val vm: ConnectionsViewModel = viewModel(
         factory = viewModelFactory {
             initializer { ConnectionsViewModel(dao, onSave, onDelete) }
         },
     )
+    val shareVm: LanShareViewModel = viewModel(
+        factory = viewModelFactory { initializer { LanShareViewModel(shareRoot) } },
+    )
     val connections by vm.connections.collectAsStateWithLifecycle()
     val error by vm.error.collectAsStateWithLifecycle()
+    val share by shareVm.state.collectAsStateWithLifecycle()
     var addDialog by remember { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<ConnectionUi?>(null) }
 
@@ -165,7 +173,14 @@ fun ConnectionsScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 )
             }
-            Box(Modifier.fillMaxSize()) {
+            Spacer(Modifier.height(12.dp))
+            SharingCard(
+                state = share,
+                onToggle = { shareVm.toggle() },
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+            Spacer(Modifier.height(12.dp))
+            Box(Modifier.fillMaxSize().weight(1f)) {
                 if (connections.isEmpty()) {
                     Column(
                         Modifier.fillMaxSize(),

@@ -48,6 +48,10 @@ Explorer 4.4.2.2.1) is used **only as a functional reference** — see the analy
   configuration changes and process death.
 - **Lock-screen audio** (P1-8) — ExoPlayer behind a `MediaSession`
   (`media3-session`): system media controls while the app is in background.
+- **LAN sharing / embedded FTP server** (P1-5) — Apache FtpServer rooted at
+  external storage with a guest account; start/stop from the Network screen,
+  share URL + scannable QR code (ZXing) so any device can open it with one
+  scan.
 
 ## Building
 

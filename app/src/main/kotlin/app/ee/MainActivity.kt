@@ -139,6 +139,7 @@ private fun MainContent(app: EeApp, router: Router) {
             dao = app.database.connections(),
             onSave = { form -> app.saveProfile(form) },
             onDelete = { id -> app.deleteProfile(id) },
+            shareRoot = app.storageRoot,
         )
 
         is Screen.Image -> ImageViewerScreen(

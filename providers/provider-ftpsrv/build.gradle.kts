@@ -1,15 +1,14 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
 }
 
 android {
     namespace = "app.ee.provider.ftpsrv"
-    compileSdk = 35
+    compileSdk = 34
 
     defaultConfig {
-        minSdk = 26
+        minSdk = 24
         consumerProguardFiles("consumer-rules.pro")
     }
 
@@ -20,15 +19,12 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
-    buildFeatures {
-        compose = true
-    }
 }
 
 dependencies {
-    api(project(":design-system"))
-    implementation(project(":core:core-file"))
-    implementation(project(":core:core-model"))
+    api(libs.ftpserver.core)
+    implementation(libs.zxing.core)
     implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.core)
+    testImplementation(libs.junit)
 }
