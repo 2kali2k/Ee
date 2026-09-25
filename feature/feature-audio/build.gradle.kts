@@ -29,6 +29,7 @@ dependencies {
     api(project(":design-system"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.media3.exoplayer)
+    implementation(libs.media3.session)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.compose.ui)
     implementation(libs.compose.material3)

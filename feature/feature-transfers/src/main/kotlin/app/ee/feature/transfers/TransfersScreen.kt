@@ -40,8 +40,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import app.ee.core.db.EeDatabase
-import app.ee.core.net.HttpClientFactory
-import okhttp3.OkHttpClient
 
 /**
  * Transfer station (M2 — P1-9): the download queue with add / pause /
@@ -54,13 +52,11 @@ fun TransfersScreen(
     onBack: () -> Unit,
     database: EeDatabase,
 ) {
-    val client = remember { HttpClientFactory.default() }
     val vm: TransfersViewModel = viewModel(
         factory = viewModelFactory {
             initializer {
                 TransfersViewModel(
                     androidx.compose.ui.platform.LocalContext.current.applicationContext,
-                    client,
                     database.transfers(),
                 )
             }

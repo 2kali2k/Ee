@@ -128,6 +128,9 @@ interface TransferDao {
     @Query("SELECT * FROM transfers WHERE id = :id")
     fun observe(id: String): Flow<TransferEntity?>
 
+    @Query("SELECT * FROM transfers WHERE id = :id")
+    suspend fun getById(id: String): TransferEntity?
+
     @Query("INSERT OR REPLACE INTO transfers (id, kind, fromUri, toPath, state, bytesDone, bytesTotal, error, createdAt) VALUES (:id, :kind, :fromUri, :toPath, :state, :bytesDone, :bytesTotal, :error, :createdAt)")
     suspend fun upsert(transfer: TransferEntity)
 

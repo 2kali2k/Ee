@@ -43,6 +43,11 @@ Explorer 4.4.2.2.1) is used **only as a functional reference** — see the analy
   (`core-security`, unit-tested primitives); never stored in plaintext.
 - **Copy/move** (P0-5) — app-wide clipboard, copy/move in the selection bar,
   paste into any directory (local↔network).
+- **Background downloads** (P1-9) — WorkManager worker drives the download
+  engine (HTTP Range resume); the queue lives in Room, so transfers survive
+  configuration changes and process death.
+- **Lock-screen audio** (P1-8) — ExoPlayer behind a `MediaSession`
+  (`media3-session`): system media controls while the app is in background.
 
 ## Building
 

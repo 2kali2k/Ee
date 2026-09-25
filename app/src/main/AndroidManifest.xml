@@ -27,6 +27,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Ee">
 
+        <!-- M3: MediaSession host for lock-screen audio controls -->
+        <service
+            android:name="app.ee.feature.audio.EeAudioService"
+            android:exported="false" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
