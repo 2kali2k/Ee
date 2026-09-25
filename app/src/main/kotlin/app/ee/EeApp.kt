@@ -11,6 +11,7 @@ import app.ee.core.model.ConnectionSource
 import app.ee.core.model.FsType
 import app.ee.core.model.NetConnection
 import app.ee.core.security.KeystoreSecretStore
+import app.ee.core.security.Vault
 import app.ee.feature.network.ProfileForm
 import app.ee.feature.settings.ThemeMode
 import app.ee.provider.archive.ArchiveFsProvider
@@ -20,6 +21,7 @@ import app.ee.provider.local.LocalFsProvider
 import app.ee.provider.media.MediaFsProvider
 import app.ee.provider.sftp.SftpFsProvider
 import app.ee.provider.smb.SmbFsProvider
+import app.ee.provider.vault.VaultFsProvider
 import app.ee.provider.webdav.WebDavFsProvider
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
@@ -43,6 +45,10 @@ class EeApp : Application() {
     lateinit var database: EeDatabase
         private set
     lateinit var secretStore: KeystoreSecretStore
+        private set
+
+    /** Encrypted file vault (M4 — P0-1). Key is in-memory only. */
+    lateinit var vault: Vault
         private set
 
     val storageRoot: File get() = Environment.getExternalStorageDirectory()
@@ -98,6 +104,7 @@ class EeApp : Application() {
         super.onCreate()
         database = EeDatabase.get(this)
         secretStore = KeystoreSecretStore(this)
+        vault = Vault(File(filesDir, "vault")).also { it.init() }
 
         val connectionSource = RoomConnectionSource(database.connections(), secretStore, appScope)
 
@@ -111,7 +118,8 @@ class EeApp : Application() {
         vfs.register(FtpFsProvider(connectionSource))
         vfs.register(WebDavFsProvider(connectionSource))
         vfs.register(HttpFsProvider(connectionSource))
-        // M4: vault — P2: cloud
+        // M4: vault (P0-1) — P2: cloud
+        vfs.register(VaultFsProvider(vault))
     }
 
     fun setThemeMode(mode: ThemeMode) {

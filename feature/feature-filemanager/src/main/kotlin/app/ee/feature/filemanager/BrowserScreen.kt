@@ -40,6 +40,7 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Sort
 import androidx.compose.material.icons.outlined.ViewList
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -111,6 +112,11 @@ fun BrowserScreen(
 
     val visible = remember(state) { visibleChildren(state) }
     val inTrash = state.current?.uri?.endsWith("/${BrowserViewModel.TRASH_URI_SUFFIX}") == true
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val showStorageGate = visible.isEmpty() && !state.loading && state.error == null &&
+        state.search == null &&
+        state.current?.uri?.startsWith("ee://local/") == true &&
+        !allFilesAccessGranted()
 
     Scaffold(
         topBar = {
@@ -290,6 +296,10 @@ fun BrowserScreen(
                     onDismiss = vm::dismissError,
                 )
 
+                showStorageGate -> StorageGate(
+                    onGrant = { requestAllFilesAccess(context) },
+                )
+
                 visible.isEmpty() && !state.loading -> EmptyPane(hasFilter = state.search != null)
 
                 state.viewMode == ViewMode.GRID -> LazyVerticalGrid(
@@ -397,6 +407,57 @@ private fun ErrorPane(message: String, onDismiss: () -> Unit) {
 }
 
 @Composable
+/**
+ * P0-3: Android 11+ needs the "All files access" special permission to list
+ * arbitrary directories. When an empty local directory turns out to be a
+ * permission gap (not a real empty folder), offer the system settings page
+ * directly instead of a silent empty view.
+ */
+private fun allFilesAccessGranted(): Boolean =
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+        android.os.Environment.isExternalStorageManager()
+    } else {
+        true
+    }
+
+private fun requestAllFilesAccess(context: android.content.Context) {
+    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+        val intent = android.content.Intent(
+            android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION,
+        )
+        runCatching { context.startActivity(intent) }
+    }
+}
+
+@Composable
+private fun StorageGate(onGrant: () -> Unit) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(
+            Icons.Outlined.Android,
+            contentDescription = null,
+            modifier = Modifier.size(56.dp),
+            tint = MaterialTheme.colorScheme.primary,
+        )
+        Spacer(Modifier.height(16.dp))
+        Text("All files access needed", style = MaterialTheme.typography.titleLarge)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Android 11+ blocks full-storage browsing until you grant the " +
+                "“All files access” permission. App-specific folders always work.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(20.dp))
+        Button(onClick = onGrant) { Text("Grant access") }
+    }
+}
+
 private fun EmptyPane(hasFilter: Boolean) {
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),

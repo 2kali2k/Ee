@@ -65,6 +65,7 @@ dependencies {
     implementation(project(":providers:provider-ftp"))
     implementation(project(":providers:provider-webdav"))
     implementation(project(":providers:provider-http"))
+    implementation(project(":providers:provider-vault"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)

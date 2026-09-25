@@ -17,6 +17,7 @@ import androidx.compose.material.icons.outlined.Dns
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -55,6 +56,7 @@ enum class RootTarget {
     MEDIA,
     TRANSFERS,
     NETWORK,
+    VAULT,
 }
 
 data class HomeRoot(
@@ -266,10 +268,26 @@ fun HomeScreen(
                     )
                 }
                 item {
-                    RootTile("Cloud", "M4", Icons.Outlined.Folder, enabled = false, onClick = {})
+                    RootTile("Cloud", "M5", Icons.Outlined.Folder, enabled = false, onClick = {})
                 }
                 item {
-                    RootTile("Vault", "M5", Icons.Outlined.Folder, enabled = false, onClick = {})
+                    RootTile(
+                        title = "Vault",
+                        subtitle = "Encrypted files (AES-GCM)",
+                        icon = Icons.Outlined.Lock,
+                        enabled = true,
+                        onClick = {
+                            onRootClick(
+                                HomeRoot(
+                                    "Vault",
+                                    "Encrypted files (AES-GCM)",
+                                    Icons.Outlined.Lock,
+                                    RootTarget.VAULT,
+                                    null,
+                                ),
+                            )
+                        },
+                    )
                 }
             }
         }

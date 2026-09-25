@@ -95,6 +95,7 @@ private fun MainContent(app: EeApp, router: Router) {
                     RootTarget.MEDIA -> router.push(Screen.Media)
                     RootTarget.TRANSFERS -> router.push(Screen.Transfers)
                     RootTarget.NETWORK -> router.push(Screen.Network)
+                    RootTarget.VAULT -> router.push(Screen.Vault)
                 }
             },
             onSettingsClick = { router.push(Screen.Settings) },
@@ -129,6 +130,12 @@ private fun MainContent(app: EeApp, router: Router) {
         Screen.Transfers -> TransfersScreen(
             onBack = popOrFinish,
             database = app.database,
+        )
+
+        Screen.Vault -> app.ee.feature.vault.VaultScreen(
+            vault = app.vault,
+            onBack = popOrFinish,
+            onEnter = { uri -> router.push(Screen.Browser(uri)) },
         )
 
         Screen.Network -> app.ee.feature.network.ConnectionsScreen(

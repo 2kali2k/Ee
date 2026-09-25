@@ -19,7 +19,7 @@ Explorer 4.4.2.2.1) is used **only as a functional reference** — see the analy
 | 4. M1 — local file manager MVP (browser, local provider, trash, Room, settings) | ✅ done |
 | 5. M2 — archives + media (players, downloads, media library) | ✅ done |
 | 6. M3 — network drives (SMB/SFTP/FTP/WebDAV/HTTP) + background transfers | ✅ done |
-| 7. M4 — vault + permission-aware UX (P0-1…P0-4) | ⏳ next |
+| 7. M4 — vault + permission-aware UX (P0-1…P0-4) | 🚧 in progress |
 | 8. M5 — P2 tail: USB, cloud push, SFTP key auth, directory copy/move, 7z/RAR | ⏳ |
 | 9. M6 — polish, battery/storage audit, beta (v1.0 candidate) | ⏳ |
 
@@ -55,6 +55,16 @@ Explorer 4.4.2.2.1) is used **only as a functional reference** — see the analy
   external storage with a guest account; start/stop from the Network screen,
   share URL + scannable QR code (ZXing) so any device can open it with one
   scan.
+
+### M4 progress (in progress)
+
+- **File vault** (P0-1) — encrypted directory browsed through the normal
+  browser: AES-256-GCM files, PBKDF2-HMAC-SHA256 (210k iterations) key from
+  the user's passphrase, key in memory only between unlock/lock; locked
+  vault lists but refuses to open/write. 8 unit tests in `core-security`.
+- **Storage permission UX** (P0-3) — the local browser detects the Android
+  11+ "all files access" gap (empty listing without the special permission)
+  and offers the system settings page inline instead of a silent empty view.
 
 ## Building
 

@@ -13,6 +13,7 @@ sealed interface Screen {
     data class Image(val uri: String, val title: String) : Screen
     data class Video(val uri: String, val title: String) : Screen
     data class Audio(val uri: String, val title: String) : Screen
+    data object Vault : Screen
     data object Settings : Screen
 }
 

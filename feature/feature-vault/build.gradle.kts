@@ -29,6 +29,13 @@ dependencies {
     api(project(":design-system"))
     implementation(project(":core:core-file"))
     implementation(project(":core:core-model"))
+    implementation(project(":core:core-security"))
+    api(platform(libs.compose.bom))
     implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.compose.ui)
+    implementation(libs.compose.material3)
+    implementation(libs.compose.material.icons)
 }
