@@ -2,6 +2,7 @@ package app.ee
 
 import android.app.Application
 import android.os.Environment
+import app.ee.core.db.AutoBackupEntity
 import app.ee.core.db.ConnectionDao
 import app.ee.core.db.ConnectionEntity
 import app.ee.core.db.EeDatabase
@@ -14,6 +15,7 @@ import app.ee.core.security.KeystoreSecretStore
 import app.ee.core.security.Vault
 import app.ee.feature.network.ProfileForm
 import app.ee.feature.settings.ThemeMode
+import app.ee.feature.transfers.AutoBackupWorker
 import app.ee.provider.archive.ArchiveFsProvider
 import app.ee.provider.ftp.FtpFsProvider
 import app.ee.provider.http.HttpFsProvider
@@ -173,6 +175,10 @@ class EeApp : Application() {
         vfs.register(HttpFsProvider(connectionSource))
         // M4: vault (P0-1) — P2: cloud
         vfs.register(VaultFsProvider(vault))
+
+        appScope.launch {
+            database.autoBackups().observeAll().collect { _backups.value = it }
+        }
     }
 
     fun setThemeMode(mode: ThemeMode) {
@@ -187,6 +193,64 @@ class EeApp : Application() {
         val stored = getSharedPreferences(PREFS, MODE_PRIVATE).getString(KEY_THEME, null)
         if (stored != null) ThemeMode.valueOf(stored) else ThemeMode.SYSTEM
     }.getOrDefault(ThemeMode.SYSTEM)
+
+    // M5 — P1-13 auto-backup --------------------------------------------
+    private val _backups = MutableStateFlow<List<AutoBackupEntity>>(emptyList())
+    val backups: StateFlow<List<AutoBackupEntity>> = _backups
+
+    fun addBackup(name: String, sourcePath: String, destPath: String, intervalHours: Int) {
+        appScope.launch {
+            val id = java.util.UUID.randomUUID().toString()
+            database.autoBackups().upsert(
+                AutoBackupEntity(
+                    id = id,
+                    name = name,
+                    sourcePath = sourcePath.trim().trim('/'),
+                    destPath = destPath.trim().trim('/'),
+                    intervalHours = intervalHours,
+                    enabled = true,
+                    createdAt = System.currentTimeMillis(),
+                ),
+            )
+            scheduleBackup(id, intervalHours)
+        }
+    }
+
+    fun toggleBackup(id: String, enabled: Boolean) {
+        appScope.launch {
+            val dao = database.autoBackups()
+            val job = dao.getById(id) ?: return@launch
+            dao.upsert(job.copy(enabled = enabled))
+            if (enabled) scheduleBackup(id, job.intervalHours) else unscheduleBackup(id)
+        }
+    }
+
+    fun removeBackup(id: String) {
+        appScope.launch {
+            database.autoBackups().remove(id)
+            unscheduleBackup(id)
+        }
+    }
+
+    private fun scheduleBackup(id: String, intervalHours: Int) {
+        val request = androidx.work.PeriodicWorkRequestBuilder<AutoBackupWorker>(
+            intervalHours.toLong().coerceAtLeast(1),
+            java.util.concurrent.TimeUnit.HOURS,
+        )
+            .setInputData(androidx.work.workDataOf(AutoBackupWorker.KEY_ID to id))
+            .build()
+        androidx.work.WorkManager.getInstance(this)
+            .enqueueUniquePeriodicWork(
+                AutoBackupWorker.uniqueName(id),
+                androidx.work.ExistingPeriodicWorkPolicy.REPLACE,
+                request,
+            )
+    }
+
+    private fun unscheduleBackup(id: String) {
+        androidx.work.WorkManager.getInstance(this)
+            .cancelUniqueWork(AutoBackupWorker.uniqueName(id))
+    }
 
     /** Persists a profile row + the password in the Keystore-backed store. */
     suspend fun saveProfile(form: ProfileForm): Long {

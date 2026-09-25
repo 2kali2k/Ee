@@ -120,6 +120,37 @@ interface ConnectionDao {
     fun remove(id: Long)
 }
 
+/** Auto-backup job (M5 — P1-13): periodic source→dest tree mirror. */
+@Entity(tableName = "auto_backups")
+data class AutoBackupEntity(
+    @PrimaryKey val id: String,
+    val name: String,
+    /** Relative to the external storage root (e.g. "DCIM/Camera"). */
+    val sourcePath: String,
+    val destPath: String,
+    /** 24 = daily, 168 = weekly (WorkManager minimum is 15 minutes). */
+    val intervalHours: Int,
+    val enabled: Boolean,
+    val lastRunAt: Long = 0,
+    val lastStatus: String? = null,
+    val createdAt: Long,
+)
+
+@Dao
+interface AutoBackupDao {
+    @Query("SELECT * FROM auto_backups ORDER BY createdAt DESC")
+    fun observeAll(): Flow<List<AutoBackupEntity>>
+
+    @Query("SELECT * FROM auto_backups WHERE id = :id")
+    suspend fun getById(id: String): AutoBackupEntity?
+
+    @Insert(onConflict = androidx.room.OnConflictStrategy.REPLACE)
+    suspend fun upsert(job: AutoBackupEntity)
+
+    @Query("DELETE FROM auto_backups WHERE id = :id")
+    suspend fun remove(id: String)
+}
+
 @Dao
 interface TransferDao {
     @Query("SELECT * FROM transfers ORDER BY createdAt DESC")
@@ -152,8 +183,9 @@ class FsTypeConverter {
         FavoriteEntity::class,
         ConnectionEntity::class,
         TransferEntity::class,
+        AutoBackupEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = false,
 )
 @TypeConverters(FsTypeConverter::class)
@@ -162,6 +194,7 @@ abstract class EeDatabase : RoomDatabase() {
     abstract fun favorites(): FavoriteDao
     abstract fun connections(): ConnectionDao
     abstract fun transfers(): TransferDao
+    abstract fun autoBackups(): AutoBackupDao
 
     companion object {
         @Volatile
@@ -187,13 +220,33 @@ abstract class EeDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `auto_backups` (
+                        `id` TEXT NOT NULL PRIMARY KEY,
+                        `name` TEXT NOT NULL,
+                        `sourcePath` TEXT NOT NULL,
+                        `destPath` TEXT NOT NULL,
+                        `intervalHours` INTEGER NOT NULL,
+                        `enabled` INTEGER NOT NULL,
+                        `lastRunAt` INTEGER NOT NULL,
+                        `lastStatus` TEXT,
+                        `createdAt` INTEGER NOT NULL
+                    )
+                    """.trimIndent(),
+                )
+            }
+        }
+
         fun get(context: Context): EeDatabase =
             instance ?: synchronized(this) {
                 instance ?: Room.databaseBuilder(
                     context.applicationContext,
                     EeDatabase::class.java,
                     "ee.db",
-                ).addMigrations(MIGRATION_1_2).build().also { instance = it }
+                ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build().also { instance = it }
             }
     }
 }

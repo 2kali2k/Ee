@@ -63,8 +63,14 @@ fun SettingsScreen(
     onLockEnabledChange: (Boolean) -> Unit,
     pinSet: Boolean,
     onSetPin: (String) -> Unit,
+    // M5 — P1-13 auto-backup
+    backups: List<AutoBackupUi>,
+    onAddBackup: (name: String, source: String, dest: String, intervalHours: Int) -> Unit,
+    onToggleBackup: (id: String, enabled: Boolean) -> Unit,
+    onRemoveBackup: (id: String) -> Unit,
 ) {
     var pinDialog by remember { mutableStateOf(false) }
+    var backupDialog by remember { mutableStateOf(false) }
     val storage = remember {
         runCatching {
             val stat = StatFs(Environment.getExternalStorageDirectory().path)
@@ -219,6 +225,61 @@ fun SettingsScreen(
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
             ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            "Auto-backup",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Button(onClick = { backupDialog = true }) { Text("Add") }
+                    }
+                    if (backups.isEmpty()) {
+                        Text(
+                            "Mirror a folder to another location on a schedule (daily/weekly).",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    backups.forEach { b ->
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(b.name, style = MaterialTheme.typography.titleSmall)
+                                Text(
+                                    "${b.source} → ${b.dest} · ${if (b.daily) "daily" else "weekly"}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                b.lastStatus?.let {
+                                    Text(
+                                        it,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                            androidx.compose.material3.Switch(
+                                checked = b.enabled,
+                                onCheckedChange = { onToggleBackup(b.id, it) },
+                            )
+                            IconButton(onClick = { onRemoveBackup(b.id) }) {
+                                Icon(androidx.compose.material.icons.Icons.Outlined.Close, contentDescription = "Remove")
+                            }
+                        }
+                    }
+                }
+            }
+
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            ) {
                 Column(Modifier.padding(16.dp)) {
                     Text("About", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(4.dp))
@@ -242,4 +303,87 @@ fun SettingsScreen(
             },
         )
     }
+
+    if (backupDialog) {
+        AddBackupDialog(
+            onDismiss = { backupDialog = false },
+            onConfirm = { name, source, dest, hours ->
+                onAddBackup(name, source, dest, hours)
+                backupDialog = false
+            },
+        )
+    }
+}
+
+/** One auto-backup job as shown in Settings (M5 — P1-13). */
+data class AutoBackupUi(
+    val id: String,
+    val name: String,
+    val source: String,
+    val dest: String,
+    val daily: Boolean,
+    val enabled: Boolean,
+    val lastStatus: String?,
+)
+
+@Composable
+private fun AddBackupDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (name: String, source: String, dest: String, intervalHours: Int) -> Unit,
+) {
+    var name by remember { mutableStateOf("Backup") }
+    var source by remember { mutableStateOf("") }
+    var dest by remember { mutableStateOf("Backups") }
+    var daily by remember { mutableStateOf(true) }
+    val valid = name.isNotBlank() && source.isNotBlank() && dest.isNotBlank()
+
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("New auto-backup") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                androidx.compose.material3.OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Name") },
+                    singleLine = true,
+                )
+                androidx.compose.material3.OutlinedTextField(
+                    value = source,
+                    onValueChange = { source = it },
+                    label = { Text("Source folder (relative to storage)") },
+                    placeholder = { Text("e.g. DCIM/Camera") },
+                    singleLine = true,
+                )
+                androidx.compose.material3.OutlinedTextField(
+                    value = dest,
+                    onValueChange = { dest = it },
+                    label = { Text("Destination folder") },
+                    placeholder = { Text("e.g. Backups") },
+                    singleLine = true,
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    androidx.compose.material3.FilterChip(
+                        selected = daily,
+                        onClick = { daily = true },
+                        label = { Text("Daily") },
+                    )
+                    androidx.compose.material3.FilterChip(
+                        selected = !daily,
+                        onClick = { daily = false },
+                        label = { Text("Weekly") },
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(
+                enabled = valid,
+                onClick = { onConfirm(name.trim(), source.trim(), dest.trim(), if (daily) 24 else 168) },
+            ) { Text("Save") }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+    )
 }

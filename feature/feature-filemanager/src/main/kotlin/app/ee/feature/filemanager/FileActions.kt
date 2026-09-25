@@ -76,4 +76,16 @@ object FileActions {
         }
         return "application/octet-stream"
     }
+
+    /** Extensions the built-in editor (P1-11) opens instead of the share sheet. */
+    val TEXT_EXTS = setOf(
+        "txt", "md", "log", "json", "xml", "html", "csv",
+        "kt", "java", "py", "sh", "yml", "yaml", "toml", "ini", "conf",
+        "properties", "bat", "js", "ts", "css", "sql",
+    )
+
+    fun isTextFile(name: String): Boolean {
+        val dot = name.lastIndexOf('.')
+        return dot in 1 until name.length && name.substring(dot + 1).lowercase() in TEXT_EXTS
+    }
 }

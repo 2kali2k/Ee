@@ -13,7 +13,7 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = 3
-        versionName = "0.4.0"
+        versionName = "0.5.0"
     }
 
     buildTypes {
@@ -69,6 +69,7 @@ dependencies {
     implementation(project(":providers:provider-vault"))
     implementation(libs.biometric)
     implementation(libs.androidx.lifecycle.process)
+    implementation(libs.work.runtime.ktx)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)

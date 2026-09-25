@@ -28,6 +28,8 @@ import app.ee.feature.transfers.TransfersScreen
 import app.ee.feature.video.VideoPlayerScreen
 import app.ee.provider.local.StorageAccess
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 /**
  * Single-activity host (docs/02-specification.md §4.6). The in-app Router
@@ -59,6 +61,9 @@ class MainActivity : ComponentActivity() {
             },
         )
 
+        // M5 — P1-12: share-receive (SEND/SEND_MULTIPLE) + file-chooser target
+        handleLaunch(intent)
+
         setContent {
             val themeMode by app.themeMode.collectAsStateWithLifecycle()
             val lockEnabled by app.lockEnabled.collectAsStateWithLifecycle()
@@ -74,6 +79,33 @@ class MainActivity : ComponentActivity() {
                     LockGate(app = app, activity = this)
                 } else {
                     MainContent(app = app, router = router)
+                    // P1-12: "save here" dialog for incoming shares
+                    val incoming by this@MainActivity.incomingFiles.collectAsStateWithLifecycle()
+                    if (incoming.isNotEmpty()) {
+                        androidx.compose.material3.AlertDialog(
+                            onDismissRequest = { this@MainActivity.incomingFiles.value = emptyList() },
+                            title = {
+                                androidx.compose.material3.Text(
+                                    "Save ${if (incoming.size == 1) incoming[0].name else "${incoming.size} files"}?",
+                                )
+                            },
+                            text = {
+                                androidx.compose.material3.Text(
+                                    "Destination: " + this@MainActivity.downloadsDir().absolutePath,
+                                )
+                            },
+                            confirmButton = {
+                                androidx.compose.material3.TextButton(
+                                    onClick = { this@MainActivity.saveIncoming() },
+                                ) { androidx.compose.material3.Text("Save here") }
+                            },
+                            dismissButton = {
+                                androidx.compose.material3.TextButton(
+                                    onClick = { this@MainActivity.incomingFiles.value = emptyList() },
+                                ) { androidx.compose.material3.Text("Discard") }
+                            },
+                        )
+                    }
                 }
             }
         }
@@ -127,6 +159,110 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    // ------------------------------------------------------------------
+    // M5 — P1-12: share-receive ("Save here") + GET_CONTENT chooser target
+    // ------------------------------------------------------------------
+
+    /** One incoming shared item: a content [uri] or shared plain [text]. */
+    data class IncomingFile(val name: String, val uri: Uri?, val text: String? = null)
+
+    private val incomingFiles =
+        kotlinx.coroutines.flow.MutableStateFlow<List<IncomingFile>>(emptyList())
+
+    private var chooserMode = false
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleLaunch(intent)
+    }
+
+    private fun handleLaunch(intent: Intent) {
+        when (intent.action) {
+            Intent.ACTION_GET_CONTENT, Intent.ACTION_OPEN_DOCUMENT -> {
+                chooserMode = true
+                router.push(Screen.Browser("ee://local/"))
+            }
+
+            Intent.ACTION_SEND -> {
+                val stream = runCatching {
+                    intent.getParcelableExtra<Uri>(Intent.EXTRA_STREAM)
+                }.getOrNull()
+                val text = intent.getCharSequenceExtra(Intent.EXTRA_TEXT)?.toString()
+                val file = when {
+                    stream != null -> IncomingFile(displayName(stream), stream)
+                    text != null -> IncomingFile(
+                        "shared-text-${System.currentTimeMillis() / 1000}.txt",
+                        null,
+                        text,
+                    )
+                    else -> null
+                }
+                if (file != null) incomingFiles.value = listOf(file)
+            }
+
+            Intent.ACTION_SEND_MULTIPLE -> {
+                val streams = runCatching {
+                    intent.getParcelableArrayListExtra<Uri>(Intent.EXTRA_STREAM)
+                }.getOrNull() ?: return
+                if (streams.isEmpty()) return
+                incomingFiles.value = streams.map { IncomingFile(displayName(it), it) }
+            }
+        }
+    }
+
+    private fun displayName(uri: Uri): String {
+        var name: String? = null
+        runCatching {
+            contentResolver.query(uri, null, null, null, null)?.use { cursor ->
+                val idx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                if (idx >= 0 && cursor.moveToFirst()) name = cursor.getString(idx)
+            }
+        }
+        return name ?: "shared-${System.currentTimeMillis() / 1000}"
+    }
+
+    /** Download dir with an app-private fallback. */
+    private fun downloadsDir(): java.io.File {
+        val public = android.os.Environment.getExternalStoragePublicDirectory(
+            android.os.Environment.DIRECTORY_DOWNLOADS,
+        )
+        if (public.exists() || public.mkdirs()) {
+            if (public.canWrite()) return public
+        }
+        return java.io.File(getExternalFilesDir(android.os.Environment.DIRECTORY_DOWNLOADS), "")
+    }
+
+    private fun saveIncoming() {
+        val files = incomingFiles.value
+        if (files.isEmpty()) return
+        val dir = downloadsDir()
+        androidx.lifecycle.lifecycleScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            var ok = 0
+            files.forEach { item ->
+                val file = java.io.File(dir, item.name)
+                runCatching {
+                    if (item.text != null) {
+                        file.writeText(item.text)
+                    } else {
+                        contentResolver.openInputStream(item.uri ?: return@runCatching)?.use { input ->
+                            file.outputStream().use { out -> input.copyTo(out) }
+                        }
+                    }
+                    ok++
+                }
+            }
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                incomingFiles.value = emptyList()
+                android.widget.Toast.makeText(
+                    this@MainActivity,
+                    "Saved $ok of ${files.size} to ${dir.absolutePath}",
+                    android.widget.Toast.LENGTH_LONG,
+                ).show()
+            }
+        }
+    }
+
     fun openAppStorageSettings() {
         val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             Intent(
@@ -144,6 +280,7 @@ class MainActivity : ComponentActivity() {
 private fun MainContent(app: EeApp, router: Router) {
     val context = LocalContext.current
     val activity = context as MainActivity
+    val backups by app.backups.collectAsStateWithLifecycle()
 
     val popOrFinish: () -> Unit = {
         if (!router.pop()) activity.finish()
@@ -173,7 +310,28 @@ private fun MainContent(app: EeApp, router: Router) {
             clipboard = app.clipboard,
             setClipboard = app::setClipboard,
             onBack = popOrFinish,
-            onOpenFile = { node -> FileActions.openFile(context, node) },
+            onOpenFile = { node ->
+                if (activity.chooserMode) {
+                    // P1-12: GET_CONTENT target — return the picked file
+                    val path = node.metadata?.extra?.get("path")
+                    val file = path?.let(::java.io.File)?.takeIf { it.exists() }
+                    if (file != null) {
+                        val uri = androidx.core.content.FileProvider.getUriForFile(
+                            activity, "${activity.packageName}.fileprovider", file,
+                        )
+                        activity.setResult(
+                            android.app.Activity.RESULT_OK,
+                            Intent().putExtra(Intent.EXTRA_STREAM, uri)
+                                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION),
+                        )
+                        activity.finish()
+                    }
+                } else if (FileActions.isTextFile(node.name)) {
+                    router.push(Screen.Editor(node.uri, node.name))
+                } else {
+                    FileActions.openFile(context, node)
+                }
+            },
             onOpenArchive = { node ->
                 node.metadata?.extra?.get("path")?.let { path ->
                     router.push(Screen.Browser("ee://archive/$path"))
@@ -231,6 +389,13 @@ private fun MainContent(app: EeApp, router: Router) {
             onBack = popOrFinish,
         )
 
+        is Screen.Editor -> app.ee.feature.filemanager.EditorScreen(
+            vfs = app.vfs,
+            uri = screen.uri,
+            title = screen.title,
+            onBack = popOrFinish,
+        )
+
         Screen.Settings -> SettingsScreen(
             onBack = popOrFinish,
             themeMode = app.themeMode.value,
@@ -242,6 +407,24 @@ private fun MainContent(app: EeApp, router: Router) {
             onLockEnabledChange = app::setLockEnabled,
             pinSet = app.pinSet.value,
             onSetPin = app::setPin,
+            backups = backups.map {
+                app.ee.feature.settings.AutoBackupUi(
+                    id = it.id,
+                    name = it.name,
+                    source = it.sourcePath,
+                    dest = it.destPath,
+                    daily = it.intervalHours <= 48,
+                    enabled = it.enabled,
+                    lastStatus = it.lastStatus?.let { s ->
+                        val stamp = it.lastRunAt.takeIf { t -> t > 0 }
+                            ?.let { t -> java.text.SimpleDateFormat("dd MMM, HH:mm", java.util.Locale.getDefault()).format(java.util.Date(t)) }
+                        stamp?.let { "$s · $it" } ?: s
+                    },
+                )
+            },
+            onAddBackup = { name, source, dest, hours -> app.addBackup(name, source, dest, hours) },
+            onToggleBackup = { id, enabled -> app.toggleBackup(id, enabled) },
+            onRemoveBackup = { id -> app.removeBackup(id) },
         )
     }
 }

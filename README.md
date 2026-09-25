@@ -20,8 +20,8 @@ Explorer 4.4.2.2.1) is used **only as a functional reference** — see the analy
 | 5. M2 — archives + media (players, downloads, media library) | ✅ done |
 | 6. M3 — network drives (SMB/SFTP/FTP/WebDAV/HTTP) + background transfers | ✅ done |
 | 7. M4 — all P0 done + vault (P1-2) + app lock + permission UX | ✅ done |
-| 8. M5 — P1 tail: text/MD editor (P1-11), share-receive (P1-12), auto-backup (P1-13), 7z/RAR | ⏳ next |
-| 9. M6 — P2 roadmap (cloud, DLNA, USB, …), polish, v1.0 | ⏳ |
+| 8. M5 — P1 tail: text/MD editor (P1-11), share-receive (P1-12), auto-backup (P1-13) | ✅ done (7z/RAR → M6) |
+| 9. M6 — 7z/RAR native, P2 roadmap (cloud, DLNA, USB, …), polish, v1.0 | ⏳ next |
 
 ### M2 highlights (v0.3.0-m2)
 
@@ -71,6 +71,22 @@ P0-4 is the only cosmetic remainder). M4 adds the security layer:
 - **Storage permission UX** (spec §6) — the local browser detects the
   Android 11+ "all files access" gap and offers the system settings page
   inline instead of a silent empty view.
+
+### M5 (done — v0.5.0)
+
+- **Text & Markdown editor** (P1-11) — text-ish files (`.txt/.md/.json/…`)
+  open in the built-in editor instead of the share sheet; reads/writes
+  through the VFS provider (local, vault, writable network roots); `.md`
+  gets a preview tab from a small unit-tested renderer (headings, bold,
+  italic, code, links, lists, quotes, fences).
+- **Share-receive** (P1-12) — Ee is a `SEND`/`SEND_MULTIPLE` target
+  ("Save here" → Download) and a `GET_CONTENT` file-chooser target
+  (pick any local file, returned via FileProvider).
+- **Auto-backup** (P1-13) — periodic folder mirror (daily/weekly) driven by
+  WorkManager; incremental (size+mtime), overlap-safe; jobs managed in
+  Settings with last-run status. 5 unit tests for the mirror core.
+- 7z/RAR reading needs a native engine (`sevenzipjbinding` + .so assets) —
+  deferred to M6 with the rest of the P2 surface.
 
 ## Building
 
