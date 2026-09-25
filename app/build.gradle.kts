@@ -13,7 +13,7 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = 3
-        versionName = "0.3.0-m3"
+        versionName = "0.4.0"
     }
 
     buildTypes {
@@ -35,6 +35,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     packaging {
         resources.excludes += setOf("META-INF/{AL2.0,LGPL2.1}")
@@ -66,6 +67,8 @@ dependencies {
     implementation(project(":providers:provider-webdav"))
     implementation(project(":providers:provider-http"))
     implementation(project(":providers:provider-vault"))
+    implementation(libs.biometric)
+    implementation(libs.androidx.lifecycle.process)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)

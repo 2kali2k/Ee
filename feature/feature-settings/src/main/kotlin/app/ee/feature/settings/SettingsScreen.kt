@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -29,7 +28,10 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
@@ -56,7 +58,13 @@ fun SettingsScreen(
     canManageAllFiles: Boolean,
     onOpenStorageSettings: () -> Unit,
     appVersion: String,
+    // M4 — P0-2 app lock
+    lockEnabled: Boolean,
+    onLockEnabledChange: (Boolean) -> Unit,
+    pinSet: Boolean,
+    onSetPin: (String) -> Unit,
 ) {
+    var pinDialog by remember { mutableStateOf(false) }
     val storage = remember {
         runCatching {
             val stat = StatFs(Environment.getExternalStorageDirectory().path)
@@ -179,6 +187,38 @@ fun SettingsScreen(
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
             ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Security", style = MaterialTheme.typography.titleMedium)
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f)) {
+                            Text("App lock", style = MaterialTheme.typography.titleSmall)
+                            Text(
+                                "Locks the app in the background; unlock with your " +
+                                    "PIN or fingerprint.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        androidx.compose.material3.Switch(
+                            checked = lockEnabled,
+                            onCheckedChange = onLockEnabledChange,
+                        )
+                    }
+                    if (lockEnabled) {
+                        Button(onClick = { pinDialog = true }) {
+                            Text(if (pinSet) "Change PIN" else "Set PIN")
+                        }
+                    }
+                }
+            }
+
+            Card(
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+            ) {
                 Column(Modifier.padding(16.dp)) {
                     Text("About", style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(4.dp))
@@ -191,5 +231,15 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    if (pinDialog) {
+        SetPinDialog(
+            onDismiss = { pinDialog = false },
+            onConfirm = { newPin ->
+                onSetPin(newPin)
+                pinDialog = false
+            },
+        )
     }
 }

@@ -60,6 +60,49 @@ class EeApp : Application() {
     private val _clipboard = MutableStateFlow<List<ClipboardEntry>>(emptyList())
     val clipboard: StateFlow<List<ClipboardEntry>> = _clipboard
 
+    // M4 — P0-2 app lock -------------------------------------------------
+    private val _lockEnabled = MutableStateFlow(false)
+    val lockEnabled: StateFlow<Boolean> = _lockEnabled
+
+    private val _pinSet = MutableStateFlow(false)
+    val pinSet: StateFlow<Boolean> = _pinSet
+
+    private val _locked = MutableStateFlow(false)
+    val locked: StateFlow<Boolean> = _locked
+
+    fun setLockEnabled(enabled: Boolean) {
+        _lockEnabled.value = enabled
+        getSharedPreferences(PREFS, MODE_PRIVATE)
+            .edit()
+            .putBoolean(KEY_LOCK_ENABLED, enabled)
+            .apply()
+        if (enabled) _locked.value = true
+    }
+
+    /** Empty [pin] clears the PIN. */
+    fun setPin(pin: String) {
+        if (pin.isEmpty()) {
+            runCatching { secretStore.delete(PIN_KEY) }
+        } else {
+            secretStore.put(PIN_KEY, pin)
+        }
+        _pinSet.value = pin.isNotEmpty()
+    }
+
+    fun verifyPin(pin: String): Boolean =
+        runCatching { secretStore.get(PIN_KEY) }
+            .getOrNull()
+            ?.let { it == pin }
+            ?: false
+
+    fun unlock() {
+        _locked.value = false
+    }
+
+    fun lock() {
+        if (_lockEnabled.value) _locked.value = true
+    }
+
     fun setClipboard(entries: List<ClipboardEntry>) {
         _clipboard.value = entries
     }
@@ -105,6 +148,16 @@ class EeApp : Application() {
         database = EeDatabase.get(this)
         secretStore = KeystoreSecretStore(this)
         vault = Vault(File(filesDir, "vault")).also { it.init() }
+
+        // app lock (P0-2): restore preferences; start locked when enabled
+        val lockEnabledPref = getSharedPreferences(PREFS, MODE_PRIVATE)
+            .getBoolean(KEY_LOCK_ENABLED, false)
+        _lockEnabled.value = lockEnabledPref
+        _pinSet.value = runCatching { secretStore.get(PIN_KEY) }
+            .getOrNull()
+            ?.let { it.isNotEmpty() }
+            ?: false
+        _locked.value = lockEnabledPref
 
         val connectionSource = RoomConnectionSource(database.connections(), secretStore, appScope)
 
@@ -166,5 +219,7 @@ class EeApp : Application() {
     companion object {
         const val PREFS = "ee_prefs"
         const val KEY_THEME = "theme"
+        const val KEY_LOCK_ENABLED = "lock_enabled"
+        const val PIN_KEY = "app_pin"
     }
 }

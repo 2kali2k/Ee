@@ -19,9 +19,9 @@ Explorer 4.4.2.2.1) is used **only as a functional reference** — see the analy
 | 4. M1 — local file manager MVP (browser, local provider, trash, Room, settings) | ✅ done |
 | 5. M2 — archives + media (players, downloads, media library) | ✅ done |
 | 6. M3 — network drives (SMB/SFTP/FTP/WebDAV/HTTP) + background transfers | ✅ done |
-| 7. M4 — vault + permission-aware UX (P0-1…P0-4) | 🚧 in progress |
-| 8. M5 — P2 tail: USB, cloud push, SFTP key auth, directory copy/move, 7z/RAR | ⏳ |
-| 9. M6 — polish, battery/storage audit, beta (v1.0 candidate) | ⏳ |
+| 7. M4 — all P0 done + vault (P1-2) + app lock + permission UX | ✅ done |
+| 8. M5 — P1 tail: text/MD editor (P1-11), share-receive (P1-12), auto-backup (P1-13), 7z/RAR | ⏳ next |
+| 9. M6 — P2 roadmap (cloud, DLNA, USB, …), polish, v1.0 | ⏳ |
 
 ### M2 highlights (v0.3.0-m2)
 
@@ -56,15 +56,21 @@ Explorer 4.4.2.2.1) is used **only as a functional reference** — see the analy
   share URL + scannable QR code (ZXing) so any device can open it with one
   scan.
 
-### M4 progress (in progress)
+### M4 (done — v0.4.0)
 
-- **File vault** (P0-1) — encrypted directory browsed through the normal
-  browser: AES-256-GCM files, PBKDF2-HMAC-SHA256 (210k iterations) key from
-  the user's passphrase, key in memory only between unlock/lock; locked
+All P0 features of the spec (§3) are now shipped (the fast-scroller part of
+P0-4 is the only cosmetic remainder). M4 adds the security layer:
+
+- **Encrypted vault** (P1-2) — browsed through the normal browser:
+  AES-256-GCM `EEVF1` containers, PBKDF2-HMAC-SHA256 (210k iterations) from
+  the user's passphrase, key in memory only between unlock/lock; a locked
   vault lists but refuses to open/write. 8 unit tests in `core-security`.
-- **Storage permission UX** (P0-3) — the local browser detects the Android
-  11+ "all files access" gap (empty listing without the special permission)
-  and offers the system settings page inline instead of a silent empty view.
+- **App lock** — locks in the background (ProcessLifecycleOwner); full-screen
+  PIN pad (4–8 digits, stored in the Keystore-backed box) plus
+  BiometricPrompt / device-credential unlock (API 28+).
+- **Storage permission UX** (spec §6) — the local browser detects the
+  Android 11+ "all files access" gap and offers the system settings page
+  inline instead of a silent empty view.
 
 ## Building
 

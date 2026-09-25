@@ -12,6 +12,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import app.ee.designsystem.EeTheme
 import app.ee.feature.audio.AudioPlayerScreen
@@ -49,8 +50,19 @@ class MainActivity : ComponentActivity() {
 
         val app = application as EeApp
 
+        // P0-2: lock the app whenever the whole process goes to background
+        androidx.lifecycle.ProcessLifecycleOwner.get().lifecycle.addObserver(
+            object : androidx.lifecycle.DefaultLifecycleObserver {
+                override fun onStop(owner: androidx.lifecycle.LifecycleOwner) {
+                    app.lock()
+                }
+            },
+        )
+
         setContent {
             val themeMode by app.themeMode.collectAsStateWithLifecycle()
+            val lockEnabled by app.lockEnabled.collectAsStateWithLifecycle()
+            val locked by app.locked.collectAsStateWithLifecycle()
             EeTheme(
                 darkTheme = when (themeMode) {
                     ThemeMode.DARK -> true
@@ -58,9 +70,61 @@ class MainActivity : ComponentActivity() {
                     ThemeMode.SYSTEM -> isSystemInDarkTheme()
                 },
             ) {
-                MainContent(app = app, router = router)
+                if (lockEnabled && locked) {
+                    LockGate(app = app, activity = this)
+                } else {
+                    MainContent(app = app, router = router)
+                }
             }
         }
+    }
+
+    /** P0-2: fingerprint / device-credential unlock (API 28+; PIN-only below). */
+    private fun isBiometricAvailable(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return false
+        return androidx.biometric.BiometricManager.from(this)
+            .canAuthenticate(
+                androidx.biometric.BiometricManager.BIOMETRIC_STRONG or
+                    androidx.biometric.BiometricManager.DEVICE_CREDENTIAL,
+            ) == androidx.biometric.BiometricManager.BIOMETRIC_SUCCESS
+    }
+
+    private fun launchBiometricPrompt() {
+        val app = application as EeApp
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            return
+        }
+        val manager = androidx.biometric.BiometricManager.from(this)
+        if (
+            manager.canAuthenticate(
+                androidx.biometric.BiometricManager.BIOMETRIC_STRONG or
+                    androidx.biometric.BiometricManager.DEVICE_CREDENTIAL,
+            ) != androidx.biometric.BiometricManager.BIOMETRIC_SUCCESS
+        ) {
+            return
+        }
+        val prompt = androidx.biometric.BiometricPrompt(
+            this,
+            androidx.core.content.ContextCompat.getMainExecutor(this),
+            object : androidx.biometric.BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(
+                    result: androidx.biometric.BiometricPrompt.AuthenticationResult,
+                ) {
+                    app.unlock()
+                }
+                // failure keeps the app locked; PIN fallback remains
+            },
+        )
+        prompt.authenticate(
+            androidx.biometric.BiometricPrompt.PromptInfo.Builder()
+                .setTitle("Unlock Ee")
+                .setAllowedAuthenticators(
+                    androidx.biometric.BiometricManager.BIOMETRIC_STRONG or
+                        androidx.biometric.BiometricManager.DEVICE_CREDENTIAL,
+                )
+                .setConfirmationRequired(false)
+                .build(),
+        )
     }
 
     fun openAppStorageSettings() {
@@ -173,7 +237,33 @@ private fun MainContent(app: EeApp, router: Router) {
             onThemeModeChange = app::setThemeMode,
             canManageAllFiles = StorageAccess.canManageAllFiles(),
             onOpenStorageSettings = activity::openAppStorageSettings,
-            appVersion = "0.3.0-m2",
+            appVersion = BuildConfig.VERSION_NAME,
+            lockEnabled = app.lockEnabled.value,
+            onLockEnabledChange = app::setLockEnabled,
+            pinSet = app.pinSet.value,
+            onSetPin = app::setPin,
         )
     }
+}
+
+/** Full-screen lock gate (P0-2) — replaces all content until unlocked. */
+@Composable
+private fun LockGate(app: EeApp, activity: MainActivity) {
+    val pinSet by app.pinSet.collectAsStateWithLifecycle()
+    val biometricOk = remember { activity.isBiometricAvailable() }
+    app.ee.feature.settings.LockScreen(
+        pinSet = pinSet,
+        biometricAvailable = biometricOk,
+        onBiometric = { activity.launchBiometricPrompt() },
+        onVerifyPin = { pin ->
+            val ok = app.verifyPin(pin)
+            if (ok) app.unlock()
+            ok
+        },
+        onSetPin = { pin ->
+            app.setPin(pin)
+            // a fresh PIN immediately unlocks (it is what was just entered)
+            app.unlock()
+        },
+    )
 }
