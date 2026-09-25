@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.android)
-    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.ksp)
 }
 
 android {
@@ -20,15 +20,13 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
-    buildFeatures {
-        compose = true
-    }
 }
 
 dependencies {
-    api(project(":design-system"))
-    implementation(project(":core:core-file"))
-    implementation(project(":core:core-model"))
-    implementation(libs.androidx.core.ktx)
+    api(project(":core:core-model"))
+    api(libs.room.runtime)
+    implementation(libs.room.ktx)
     implementation(libs.kotlinx.coroutines.core)
+
+    ksp(libs.room.compiler)
 }

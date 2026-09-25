@@ -12,8 +12,8 @@ android {
         applicationId = "app.ee"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0-m0"
+        versionCode = 2
+        versionName = "0.2.0-m1"
     }
 
     buildTypes {
@@ -44,13 +44,18 @@ android {
 dependencies {
     implementation(project(":design-system"))
     implementation(project(":feature:feature-home"))
+    implementation(project(":feature:feature-filemanager"))
+    implementation(project(":feature:feature-settings"))
     implementation(project(":core:core-file"))
     implementation(project(":core:core-model"))
     implementation(project(":core:core-common"))
+    implementation(project(":core:core-database"))
+    implementation(project(":providers:provider-local"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.kotlinx.coroutines.core)
 
     implementation(platform(libs.compose.bom))

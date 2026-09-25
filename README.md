@@ -16,7 +16,8 @@ Explorer 4.4.2.2.1) is used **only as a functional reference** — see the analy
 | 1. Reverse-engineer the reference APK (manifest, dex, resources, assets) | ✅ done |
 | 2. Specification (scope, architecture, modules, security, roadmap) | ✅ done |
 | 3. M0 — project scaffold (33 modules, VFS core + tests, design system, CI) | ✅ done |
-| 4. M1 — local file manager MVP (browser + local provider) | ⏳ next |
+| 4. M1 — local file manager MVP (browser, local provider, trash, Room, settings) | ✅ done |
+| 5. M2 — archives + media (players, downloads, media library) | ⏳ next |
 
 ## Building
 
