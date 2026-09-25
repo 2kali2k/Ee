@@ -10,6 +10,8 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverter
 import androidx.room.TypeConverters
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import app.ee.core.model.FsType
 import kotlinx.coroutines.flow.Flow
 
@@ -47,6 +49,20 @@ data class ConnectionEntity(
     val path: String,
     val username: String,
     val authRef: String,
+    val createdAt: Long,
+)
+
+/** Transfer station row (M2 — P1-9). `id` is the TransferTask UUID. */
+@Entity(tableName = "transfers")
+data class TransferEntity(
+    @PrimaryKey val id: String,
+    val kind: String,
+    val fromUri: String,
+    val toPath: String,
+    val state: String,
+    val bytesDone: Long,
+    val bytesTotal: Long,
+    val error: String?,
     val createdAt: Long,
 )
 
@@ -95,6 +111,21 @@ interface ConnectionDao {
     suspend fun remove(id: Long)
 }
 
+@Dao
+interface TransferDao {
+    @Query("SELECT * FROM transfers ORDER BY createdAt DESC")
+    fun observeAll(): Flow<List<TransferEntity>>
+
+    @Query("SELECT * FROM transfers WHERE id = :id")
+    fun observe(id: String): Flow<TransferEntity?>
+
+    @Query("INSERT OR REPLACE INTO transfers (id, kind, fromUri, toPath, state, bytesDone, bytesTotal, error, createdAt) VALUES (:id, :kind, :fromUri, :toPath, :state, :bytesDone, :bytesTotal, :error, :createdAt)")
+    suspend fun upsert(transfer: TransferEntity)
+
+    @Query("DELETE FROM transfers WHERE id = :id")
+    suspend fun remove(id: String)
+}
+
 class FsTypeConverter {
     @TypeConverter
     fun fromType(value: FsType): String = value.name
@@ -104,8 +135,13 @@ class FsTypeConverter {
 }
 
 @Database(
-    entities = [RecentFileEntity::class, FavoriteEntity::class, ConnectionEntity::class],
-    version = 1,
+    entities = [
+        RecentFileEntity::class,
+        FavoriteEntity::class,
+        ConnectionEntity::class,
+        TransferEntity::class,
+    ],
+    version = 2,
     exportSchema = false,
 )
 @TypeConverters(FsTypeConverter::class)
@@ -113,10 +149,31 @@ abstract class EeDatabase : RoomDatabase() {
     abstract fun recentFiles(): RecentFileDao
     abstract fun favorites(): FavoriteDao
     abstract fun connections(): ConnectionDao
+    abstract fun transfers(): TransferDao
 
     companion object {
         @Volatile
         private var instance: EeDatabase? = null
+
+        val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `transfers` (
+                        `id` TEXT NOT NULL PRIMARY KEY,
+                        `kind` TEXT NOT NULL,
+                        `fromUri` TEXT NOT NULL,
+                        `toPath` TEXT NOT NULL,
+                        `state` TEXT NOT NULL,
+                        `bytesDone` INTEGER NOT NULL,
+                        `bytesTotal` INTEGER NOT NULL,
+                        `error` TEXT,
+                        `createdAt` INTEGER NOT NULL
+                    )
+                    """.trimIndent(),
+                )
+            }
+        }
 
         fun get(context: Context): EeDatabase =
             instance ?: synchronized(this) {
@@ -124,7 +181,7 @@ abstract class EeDatabase : RoomDatabase() {
                     context.applicationContext,
                     EeDatabase::class.java,
                     "ee.db",
-                ).build().also { instance = it }
+                ).addMigrations(MIGRATION_1_2).build().also { instance = it }
             }
     }
 }

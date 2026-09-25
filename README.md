@@ -17,7 +17,22 @@ Explorer 4.4.2.2.1) is used **only as a functional reference** — see the analy
 | 2. Specification (scope, architecture, modules, security, roadmap) | ✅ done |
 | 3. M0 — project scaffold (33 modules, VFS core + tests, design system, CI) | ✅ done |
 | 4. M1 — local file manager MVP (browser, local provider, trash, Room, settings) | ✅ done |
-| 5. M2 — archives + media (players, downloads, media library) | ⏳ next |
+| 5. M2 — archives + media (players, downloads, media library) | ✅ done |
+| 6. M3 — network drives (SMB/SFTP/FTP/WebDAV/HTTP) + background transfers | ⏳ next |
+
+### M2 highlights (v0.3.0-m2)
+
+- **Archives** — `provider-archive` browses zip/tar/tar.gz/gz/bz2 as virtual
+  folders (tap an archive in the browser), creates zips, and extracts with
+  zip-slip/tar-slip guards. 7z/RAR land in M5 (native engine).
+- **Media library** — `provider-media` exposes MediaStore (Images/Videos/Audio)
+  through the VFS; `feature-home` shows a tabbed library with Coil thumbnails.
+- **Players** — Media3 ExoPlayer: video (PlayerView + controller) and audio
+  (play/pause/seek) screens; image viewer with full-screen display.
+- **Downloads** — transfer station with add/pause/resume/cancel, HTTP Range
+  resume (206 → append, 200 → restart), queue persisted in Room (v2, real
+  1→2 migration). WorkManager background execution lands in M3.
+- **Recent files** on home, recorded as files are opened.
 
 ## Building
 

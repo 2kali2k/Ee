@@ -12,8 +12,8 @@ android {
         applicationId = "app.ee"
         minSdk = 26
         targetSdk = 35
-        versionCode = 2
-        versionName = "0.2.0-m1"
+        versionCode = 3
+        versionName = "0.3.0-m2"
     }
 
     buildTypes {
@@ -46,11 +46,18 @@ dependencies {
     implementation(project(":feature:feature-home"))
     implementation(project(":feature:feature-filemanager"))
     implementation(project(":feature:feature-settings"))
+    implementation(project(":feature:feature-video"))
+    implementation(project(":feature:feature-audio"))
+    implementation(project(":feature:feature-imageviewer"))
+    implementation(project(":feature:feature-transfers"))
     implementation(project(":core:core-file"))
     implementation(project(":core:core-model"))
     implementation(project(":core:core-common"))
     implementation(project(":core:core-database"))
+    implementation(project(":core:core-network"))
     implementation(project(":providers:provider-local"))
+    implementation(project(":providers:provider-archive"))
+    implementation(project(":providers:provider-media"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)

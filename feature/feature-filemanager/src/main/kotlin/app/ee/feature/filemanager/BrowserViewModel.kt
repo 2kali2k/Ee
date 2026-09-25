@@ -1,5 +1,6 @@
 package app.ee.feature.filemanager
 
+import app.ee.core.db.RecentFileDao
 import app.ee.core.fs.FsException
 import app.ee.core.fs.FsRegistry
 import app.ee.core.fs.FsUri
@@ -21,6 +22,7 @@ import kotlinx.coroutines.launch
 class BrowserViewModel(
     private val vfs: FsRegistry,
     startUri: String,
+    private val recentDao: RecentFileDao? = null,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(BrowserState())
@@ -49,8 +51,26 @@ class BrowserViewModel(
         if (node.isDirectory) {
             current = node
             list()
+        } else {
+            recordRecent(node)
         }
         // files: handled by the UI layer (open-with intents) — see FileActions
+    }
+
+    /** Files opened from the browser land in the home "Recent" list (M2). */
+    private fun recordRecent(node: FsNode) {
+        val dao = recentDao ?: return
+        viewModelScope.launch {
+            runCatching {
+                dao.touch(
+                    uri = node.uri,
+                    name = node.name,
+                    fsType = node.providerType.name,
+                    sizeBytes = node.metadata?.sizeBytes,
+                    lastOpenedAt = System.currentTimeMillis(),
+                )
+            }
+        }
     }
 
     fun up() {

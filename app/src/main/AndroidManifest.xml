@@ -1,6 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- M2: download manager -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- M1: legacy storage permissions (API <= 32 / 29); API 30+ uses the
          user's explicit "All files access" opt-in (no permission needed). -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"

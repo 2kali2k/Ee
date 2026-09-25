@@ -19,8 +19,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.outlined.Archive
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.Delete
@@ -64,6 +65,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import app.ee.core.db.RecentFileDao
 import app.ee.core.fs.FsRegistry
 import app.ee.core.model.FsNode
 
@@ -73,6 +75,7 @@ import app.ee.core.model.FsNode
  * @param startUri canonical VFS uri of the initial root
  * @param onBack close this browser (app backstack)
  * @param onOpenFile launch "open with" for a file node
+ * @param onOpenArchive open a supported archive file as a folder (M2)
  * @param onShare share selected file nodes
  * @param onSettings open settings
  */
@@ -81,14 +84,16 @@ import app.ee.core.model.FsNode
 fun BrowserScreen(
     startUri: String,
     vfs: FsRegistry,
+    recentsDao: RecentFileDao? = null,
     onBack: () -> Unit,
     onOpenFile: (FsNode) -> Unit,
+    onOpenArchive: (FsNode) -> Unit,
     onShare: (List<FsNode>) -> Unit,
     onSettings: () -> Unit,
 ) {
     val vm: BrowserViewModel = viewModel(
         factory = viewModelFactory {
-            initializer { BrowserViewModel(vfs, startUri) }
+            initializer { BrowserViewModel(vfs, startUri, recentsDao) }
         },
     )
     val state by vm.state.collectAsStateWithLifecycle()
@@ -272,7 +277,9 @@ fun BrowserScreen(
                             selected = node.id in state.selection,
                             onClick = {
                                 if (state.selecting) vm.toggleSelect(node.id)
-                                else if (node.isDirectory) vm.open(node) else onOpenFile(node)
+                                else if (node.isDirectory) vm.open(node)
+                                else if (isArchiveFile(node.name)) onOpenArchive(node)
+                                else onOpenFile(node)
                             },
                             onLongClick = { vm.toggleSelect(node.id) },
                         )
@@ -290,7 +297,9 @@ fun BrowserScreen(
                             selected = node.id in state.selection,
                             onClick = {
                                 if (state.selecting) vm.toggleSelect(node.id)
-                                else if (node.isDirectory) vm.open(node) else onOpenFile(node)
+                                else if (node.isDirectory) vm.open(node)
+                                else if (isArchiveFile(node.name)) onOpenArchive(node)
+                                else onOpenFile(node)
                             },
                             onLongClick = { vm.toggleSelect(node.id) },
                         )
@@ -341,7 +350,7 @@ private fun SearchBar(query: String, onQuery: (String) -> Unit, onClose: () -> U
         )
         Spacer(Modifier.width(8.dp))
         IconButton(onClick = onClose) {
-            Icon(Icons.Outlined.MoreVert, contentDescription = "Close search")
+            Icon(Icons.Outlined.Close, contentDescription = "Close search")
         }
     }
 }
@@ -502,4 +511,12 @@ private fun NameDialog(
 private fun LocalPathsExtension(name: String): String {
     val dot = name.lastIndexOf('.')
     return if (dot in 1 until name.length) name.substring(dot + 1).lowercase() else ""
+}
+
+/** M2: archive formats the browser can open in-place (provider-archive). */
+private val ARCHIVE_EXTS = setOf("zip", "tar", "gz", "bz2", "tgz")
+
+private fun isArchiveFile(name: String): Boolean {
+    if (name.lowercase().endsWith(".tar.gz")) return true
+    return LocalPathsExtension(name) in ARCHIVE_EXTS
 }

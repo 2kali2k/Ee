@@ -27,7 +27,11 @@ android {
 
 dependencies {
     api(project(":design-system"))
+    api(project(":core:core-file"))
     implementation(project(":core:core-model"))
     implementation(libs.androidx.core.ktx)
     implementation(libs.kotlinx.coroutines.core)
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.coil.compose)
 }

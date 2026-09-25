@@ -1,18 +1,29 @@
 plugins {
-    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.android.library)
+    alias(libs.plugins.kotlin.android)
 }
 
-java {
-    toolchain {
-        languageVersion.set(JavaLanguageVersion.of(17))
+android {
+    namespace = "app.ee.core.net"
+    compileSdk = 35
+
+    defaultConfig {
+        minSdk = 26
+        consumerProguardFiles("consumer-rules.pro")
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = "17"
     }
 }
 
 dependencies {
-    api(project(":core:core-model"))
+    api(libs.okhttp)
     implementation(libs.kotlinx.coroutines.core)
-    implementation(libs.okio)
 
     testImplementation(libs.junit)
-    testImplementation(libs.kotlinx.coroutines.test)
 }

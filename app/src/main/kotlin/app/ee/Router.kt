@@ -1,37 +1,37 @@
 package app.ee
 
-import androidx.compose.runtime.mutableStateListOf
-
 /**
- * M1 navigation: a plain backstack of screens (Compose-recomposable via
- * snapshot state). Formal navigation (deep links, arguments, saved state)
- * lands with the network features in M3.
+ * App-level navigation (docs/02-specification.md §4.6). M2 adds the media
+ * players, image viewer and the transfer station to the backstack.
  */
 sealed interface Screen {
     data object Home : Screen
     data class Browser(val startUri: String) : Screen
+    data object Media : Screen
+    data object Transfers : Screen
+    data class Image(val uri: String, val title: String) : Screen
+    data class Video(val uri: String, val title: String) : Screen
+    data class Audio(val uri: String, val title: String) : Screen
     data object Settings : Screen
 }
 
-class Router {
-    private val _stack = mutableStateListOf<Screen>(Screen.Home)
+/** Minimal backstack-based router. Replaced by navigation-compose only if
+ *  a later milestone really needs arguments/actions/deep-links. */
+class Router(initial: Screen = Screen.Home) {
+    private val _stack = androidx.compose.runtime.mutableStateListOf(initial)
+    val stack: List<Screen> get() = _stack
 
-    val stack: List<Screen>
-        get() = _stack
+    val current: Screen
+        get() = _stack.lastOrNull() ?: Screen.Home
 
-    fun current(): Screen = _stack.last()
-
-    fun navigate(screen: Screen) {
+    fun push(screen: Screen) {
         _stack.add(screen)
     }
 
-    /** Pops the top; false when at the root (activity finishes). */
-    fun back(): Boolean {
-        return if (_stack.size > 1) {
-            _stack.removeAt(_stack.size - 1)
-            true
-        } else {
-            false
-        }
+    /** Pops one entry; false when we're already at the root. */
+    fun pop(): Boolean {
+        if (_stack.size <= 1) return false
+        _stack.removeAt(_stack.size - 1)
+        return true
     }
 }

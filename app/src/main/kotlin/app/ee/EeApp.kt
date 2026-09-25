@@ -5,7 +5,9 @@ import android.os.Environment
 import app.ee.core.db.EeDatabase
 import app.ee.core.fs.FsRegistry
 import app.ee.feature.settings.ThemeMode
+import app.ee.provider.archive.ArchiveFsProvider
 import app.ee.provider.local.LocalFsProvider
+import app.ee.provider.media.MediaFsProvider
 import java.io.File
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,6 +15,9 @@ import kotlinx.coroutines.flow.StateFlow
 /**
  * Composition root (docs/02-specification.md §4.1): the only place that wires
  * concrete providers into the VFS registry and owns app-scoped singletons.
+ *
+ * M2: archive browsing (provider-archive) and the MediaStore media roots
+ * (provider-media) join the registry.
  */
 class EeApp : Application() {
 
@@ -31,6 +36,8 @@ class EeApp : Application() {
         database = EeDatabase.get(this)
         vfs = FsRegistry()
         vfs.register(LocalFsProvider(storageRoot))
+        vfs.register(ArchiveFsProvider())
+        vfs.register(MediaFsProvider(this))
         // M3: smb/sftp/ftp/webdav providers — M4: vault — P2: cloud
     }
 
