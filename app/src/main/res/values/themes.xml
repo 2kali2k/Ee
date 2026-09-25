@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compose-only app: no AppCompat needed. Material base theme keeps
+         splash/status bars consistent before the first frame. -->
+    <style name="Theme.Ee" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
