@@ -18,7 +18,10 @@ Explorer 4.4.2.2.1) is used **only as a functional reference** — see the analy
 | 3. M0 — project scaffold (33 modules, VFS core + tests, design system, CI) | ✅ done |
 | 4. M1 — local file manager MVP (browser, local provider, trash, Room, settings) | ✅ done |
 | 5. M2 — archives + media (players, downloads, media library) | ✅ done |
-| 6. M3 — network drives (SMB/SFTP/FTP/WebDAV/HTTP) + background transfers | 🚧 in progress |
+| 6. M3 — network drives (SMB/SFTP/FTP/WebDAV/HTTP) + background transfers | ✅ done |
+| 7. M4 — vault + permission-aware UX (P0-1…P0-4) | ⏳ next |
+| 8. M5 — P2 tail: USB, cloud push, SFTP key auth, directory copy/move, 7z/RAR | ⏳ |
+| 9. M6 — polish, battery/storage audit, beta (v1.0 candidate) | ⏳ |
 
 ### M2 highlights (v0.3.0-m2)
 
