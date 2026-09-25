@@ -34,7 +34,7 @@ Explorer 4.4.2.2.1) is used **only as a functional reference** — see the analy
   1→2 migration). WorkManager background execution lands in M3.
 - **Recent files** on home, recorded as files are opened.
 
-### M3 progress (in progress)
+### M3 (done)
 
 - **Network providers** — SMB (SMBJ), SFTP (MINA SSHD), FTP (Commons Net),
   WebDAV (PROPFIND over OkHttp), HTTP (stream + autoindex listing).
